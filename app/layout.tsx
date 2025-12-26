@@ -4,9 +4,7 @@ import type { Metadata, Viewport } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 
-import { Arimo } from 'next/font/google'
-
-const arimo = Arimo({ subsets: ["latin"] })
+// Using system fonts with Helvetica as primary
 
 export const metadata: Metadata = {
   title: {
@@ -49,7 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${arimo.className} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         {children}
         <Analytics />
       </body>
