@@ -1,108 +1,267 @@
-import { client } from './sanity.client'
-import { homepageQuery, siteSettingsQuery } from './sanity.queries'
+import { client, type ConfigurationMode } from './sanity.client'
+import { 
+  homepageQuery, 
+  siteSettingsQuery, 
+  pageQuery, 
+  featuresPageQuery, 
+  pricingPageQuery 
+} from './sanity.queries'
+import { 
+  fallbackHomepageData,
+  fallbackDataStore,
+  type FallbackHomepageData,
+  type FallbackSiteSettingsData,
+  type FallbackPageData,
+  type FallbackFeaturesPageData,
+  type FallbackPricingPageData
+} from './sanity.fallback-data'
 
-export async function getHomepageData() {
+/**
+ * Enhanced fetch utilities with error recovery and fallback logic
+ * 
+ * These functions provide robust data fetching that gracefully handles:
+ * - Missing Sanity configuration
+ * - Network failures
+ * - Invalid queries
+ * - Schema mismatches
+ * 
+ * All functions automatically fall back to static content when needed.
+ */
+
+/**
+ * Fetch homepage data with error recovery
+ * Requirements: 3.4, 4.2
+ */
+export async function getHomepageData(): Promise<FallbackHomepageData> {
   try {
-    const data = await client.fetch(homepageQuery)
-    return data
+    const result = await client.fetch<FallbackHomepageData>(homepageQuery)
+    
+    // Validate that we got valid data
+    if (!result || typeof result !== 'object') {
+      console.warn('[Sanity Fetch] Invalid homepage data received, using fallback')
+      return fallbackDataStore.getHomepage()
+    }
+    
+    return result
   } catch (error) {
-    console.error('Error fetching homepage data:', error)
-    return null
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.warn(`[Sanity Fetch] Homepage fetch failed: ${errorMessage}, using fallback`)
+    
+    // Always return fallback data to ensure the application continues working
+    return fallbackDataStore.getHomepage()
   }
 }
 
-export async function getSiteSettings() {
+/**
+ * Fetch site settings with error recovery
+ * Requirements: 3.4, 4.2
+ */
+export async function getSiteSettings(): Promise<FallbackSiteSettingsData> {
   try {
-    const data = await client.fetch(siteSettingsQuery)
-    return data
+    const result = await client.fetch<FallbackSiteSettingsData>(siteSettingsQuery)
+    
+    // Validate that we got valid data
+    if (!result || typeof result !== 'object') {
+      console.warn('[Sanity Fetch] Invalid site settings data received, using fallback')
+      return fallbackDataStore.getSiteSettings()
+    }
+    
+    return result
   } catch (error) {
-    console.error('Error fetching site settings:', error)
-    return null
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.warn(`[Sanity Fetch] Site settings fetch failed: ${errorMessage}, using fallback`)
+    
+    // Always return fallback data to ensure the application continues working
+    return fallbackDataStore.getSiteSettings()
   }
 }
 
-// Fallback data for when Sanity is not configured or data is missing
-export const fallbackHomepageData = {
-  title: 'Homepage',
-  hero: {
-    headline: 'Track all your cards and cash in one place',
-    highlightText: 'in one place',
-    subheadline: 'Connect your financial accounts, or enter expenses manually using our quick and intuitive Spendtrails apps. We help you with the financial means, so you can focus on your goals.',
-    primaryCta: {
-      text: 'Start Free Trial',
-      url: '/download',
-      variant: 'default',
-      size: 'lg',
-    },
-    secondaryCta: {
-      text: 'See How It Works',
-      url: '/how-it-works',
-      variant: 'outline',
-      size: 'lg',
-    },
-  },
-  stats: [
-    {
-      value: 2,
-      suffix: 'M+',
-      label: 'Active Users',
-      animationDuration: 2000,
-    },
-    {
-      value: 4.8,
-      suffix: '',
-      label: 'App Store Rating',
-      animationDuration: 1500,
-    },
-    {
-      value: 50,
-      suffix: 'B+',
-      prefix: '$',
-      label: 'Tracked Annually',
-      animationDuration: 2000,
-    },
-  ],
-  features: [
-    {
-      iconName: 'PiggyBank',
-      title: 'Smart Budgeting',
-      description: 'Set custom budgets and see exactly where your money goes each month.',
-    },
-    {
-      iconName: 'CreditCard',
-      title: 'Bill Tracking',
-      description: 'Never miss a payment with automatic bill detection and reminders.',
-    },
-    {
-      iconName: 'TrendingUp',
-      title: 'Savings Goals',
-      description: 'Set targets and watch your progress toward financial milestones.',
-    },
-    {
-      iconName: 'Bell',
-      title: 'Subscription Manager',
-      description: 'Track recurring charges and identify subscriptions you forgot about.',
-    },
-    {
-      iconName: 'Wallet',
-      title: 'Investment Tracking',
-      description: 'See all your investments in one place alongside your spending.',
-    },
-    {
-      iconName: 'BarChart3',
-      title: 'Spending Insights',
-      description: 'Understand your habits with clear, actionable insights.',
-    },
-  ],
-  featuresHeadline: 'Everything you need for financial clarity',
-  featuresSubheadline: 'From budgeting to investments, Spendtrails brings all your finances together.',
-  testimonialsHeadline: 'Trusted by millions',
-  securitySection: {
-    headline: 'Your security is our priority',
-    subheadline: 'We use bank-level encryption and never sell your data. Your financial information stays private.',
-  },
-  finalCta: {
-    headline: 'Start your journey to financial clarity',
-    subheadline: 'Download Spendtrails free and take the first step toward understanding your spending.',
-  },
+/**
+ * Fetch page data by slug with error recovery
+ * Requirements: 3.4, 4.2
+ */
+export async function getPageData(slug: string): Promise<FallbackPageData | null> {
+  try {
+    // Validate slug parameter
+    if (!slug || typeof slug !== 'string') {
+      console.warn('[Sanity Fetch] Invalid slug provided, using fallback')
+      return fallbackDataStore.getPage(slug || '')
+    }
+    
+    const result = await client.fetch<FallbackPageData | null>(pageQuery, { slug })
+    
+    // If no result from live query, try fallback
+    if (!result) {
+      const fallbackResult = fallbackDataStore.getPage(slug)
+      if (fallbackResult) {
+        console.info(`[Sanity Fetch] No live data for page "${slug}", using fallback`)
+      }
+      return fallbackResult
+    }
+    
+    return result
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.warn(`[Sanity Fetch] Page fetch failed for "${slug}": ${errorMessage}, using fallback`)
+    
+    // Try to return fallback data for the requested page
+    return fallbackDataStore.getPage(slug)
+  }
 }
+
+/**
+ * Fetch features page data with error recovery
+ * Requirements: 3.4, 4.2
+ */
+export async function getFeaturesPageData(): Promise<FallbackFeaturesPageData> {
+  try {
+    const result = await client.fetch<FallbackFeaturesPageData>(featuresPageQuery)
+    
+    // Validate that we got valid data
+    if (!result || typeof result !== 'object') {
+      console.warn('[Sanity Fetch] Invalid features page data received, using fallback')
+      return fallbackDataStore.getFeaturesPage()
+    }
+    
+    return result
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.warn(`[Sanity Fetch] Features page fetch failed: ${errorMessage}, using fallback`)
+    
+    // Always return fallback data to ensure the application continues working
+    return fallbackDataStore.getFeaturesPage()
+  }
+}
+
+/**
+ * Fetch pricing page data with error recovery
+ * Requirements: 3.4, 4.2
+ */
+export async function getPricingPageData(): Promise<FallbackPricingPageData> {
+  try {
+    const result = await client.fetch<FallbackPricingPageData>(pricingPageQuery)
+    
+    // Validate that we got valid data
+    if (!result || typeof result !== 'object') {
+      console.warn('[Sanity Fetch] Invalid pricing page data received, using fallback')
+      return fallbackDataStore.getPricingPage()
+    }
+    
+    return result
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.warn(`[Sanity Fetch] Pricing page fetch failed: ${errorMessage}, using fallback`)
+    
+    // Always return fallback data to ensure the application continues working
+    return fallbackDataStore.getPricingPage()
+  }
+}
+
+/**
+ * Generic fetch function with error recovery for custom queries
+ * Requirements: 3.4, 4.2
+ */
+export async function fetchWithFallback<T>(
+  query: string, 
+  params?: any, 
+  fallbackValue?: T
+): Promise<T | null> {
+  try {
+    const result = await client.fetch<T>(query, params)
+    
+    // Return result if valid, otherwise use fallback
+    if (result !== undefined && result !== null) {
+      return result
+    }
+    
+    if (fallbackValue !== undefined) {
+      console.info('[Sanity Fetch] No data returned, using provided fallback')
+      return fallbackValue
+    }
+    
+    return null
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.warn(`[Sanity Fetch] Custom query failed: ${errorMessage}`)
+    
+    // Return fallback value if provided, otherwise null
+    return fallbackValue !== undefined ? fallbackValue : null
+  }
+}
+
+/**
+ * Get the current client mode for debugging and monitoring
+ * Requirements: 4.2
+ */
+export function getClientMode(): ConfigurationMode {
+  return client.getMode()
+}
+
+/**
+ * Check if Sanity is properly configured
+ * Requirements: 4.2
+ */
+export function isClientConfigured(): boolean {
+  return client.isConfigured()
+}
+
+/**
+ * Get client state for debugging and monitoring
+ * Requirements: 4.2
+ */
+export function getClientState() {
+  return client.getState()
+}
+
+/**
+ * Utility function to safely fetch any content type with automatic fallback
+ * This ensures all routes continue to work in both live and fallback modes
+ * Requirements: 3.4
+ */
+export async function safeContentFetch<T>(
+  contentType: 'homepage' | 'siteSettings' | 'featuresPage' | 'pricingPage' | 'page',
+  params?: { slug?: string }
+): Promise<T> {
+  try {
+    switch (contentType) {
+      case 'homepage':
+        return await getHomepageData() as T
+      case 'siteSettings':
+        return await getSiteSettings() as T
+      case 'featuresPage':
+        return await getFeaturesPageData() as T
+      case 'pricingPage':
+        return await getPricingPageData() as T
+      case 'page':
+        if (!params?.slug) {
+          throw new Error('Slug parameter required for page content')
+        }
+        const pageData = await getPageData(params.slug)
+        return pageData as T
+      default:
+        throw new Error(`Unknown content type: ${contentType}`)
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error(`[Sanity Fetch] Safe content fetch failed for ${contentType}: ${errorMessage}`)
+    
+    // Return appropriate fallback based on content type
+    switch (contentType) {
+      case 'homepage':
+        return fallbackDataStore.getHomepage() as T
+      case 'siteSettings':
+        return fallbackDataStore.getSiteSettings() as T
+      case 'featuresPage':
+        return fallbackDataStore.getFeaturesPage() as T
+      case 'pricingPage':
+        return fallbackDataStore.getPricingPage() as T
+      case 'page':
+        return fallbackDataStore.getPage(params?.slug || '') as T
+      default:
+        throw new Error(`Cannot provide fallback for unknown content type: ${contentType}`)
+    }
+  }
+}
+
+// Export fallback data for backward compatibility
+export { fallbackHomepageData, fallbackDataStore }

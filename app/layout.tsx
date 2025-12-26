@@ -4,6 +4,9 @@ import type { Metadata, Viewport } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 
+// Initialize Sanity configuration validation at startup
+import '@/lib/sanity.init'
+
 // Using system fonts with Helvetica as primary
 
 export const metadata: Metadata = {

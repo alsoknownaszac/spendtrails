@@ -1,7 +1,8 @@
 import imageUrlBuilder from '@sanity/image-url'
 import { client } from './sanity.client'
 
-const builder = imageUrlBuilder(client)
+// Use the live client for image URL building to ensure compatibility
+const builder = imageUrlBuilder(client.getLiveClient())
 
 export function urlFor(source: any) {
   return builder.image(source)
